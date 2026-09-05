@@ -1,0 +1,104 @@
+import os
+from datetime import datetime
+from mcp.server.fastmcp import FastMCP
+import db
+
+# 1. Initialize FastMCP
+mcp = FastMCP("JobOps")
+
+# Initialize DB on startup
+db.init_db()
+
+# Ensure sample files exist
+DOCS_DIR = os.path.abspath("profile_docs")
+os.makedirs(DOCS_DIR, exist_ok=True)
+RESUME_FILE = os.path.join(DOCS_DIR, "master_resume.md")
+
+if not os.path.exists(RESUME_FILE):
+    with open(RESUME_FILE, "w", encoding="utf-8") as f:
+        f.write("""# Candidate Master Profile
+- **Core Skills**: filler
+- **Experience**: filler
+- **Key Projects**: filler
+""")
+
+# ==========================================
+# 2. MCP TOOLS (Actions the LLM can execute)
+# ==========================================
+
+@mcp.tool()
+def log_new_application(company: str, role: str, notes: str = "") -> str:
+    """Log a new job application into the SQLite tracking database."""
+    app_id = db.add_application(company, role, notes)
+    return f"Application #{app_id} successfully created for {role} at {company}."
+
+@mcp.tool()
+def get_pipeline(status: str = "") -> str:
+    """
+    List applications in the pipeline.
+    Optionally filter by status (e.g. 'Applied', 'Screen scheduled', 'Interviewing', 'Rejected').
+    """
+    filter_status = status.strip() if status.strip() else None
+    apps = db.list_applications(filter_status)
+    if not apps:
+        return "No applications found."
+    
+    lines = []
+    for a in apps:
+        lines.append(f"[{a['id']}] {a['company']} - {a['role']} | Status: {a['status']} (Applied: {a['date_applied']}) | Notes: {a['notes']}")
+    return "\n".join(lines)
+
+@mcp.tool()
+def update_application(app_id: int, new_status: str, notes: str = "") -> str:
+    """Update status and append notes to an existing application."""
+    success = db.update_status(app_id, new_status, notes)
+    if success:
+        return f"Application #{app_id} status updated to '{new_status}'."
+    return f"Error: Application #{app_id} not found."
+
+@mcp.tool()
+def audit_stale_applications(days_stale: int = 14) -> str:
+    """
+    Identify applications that have had no updates in more than `days_stale` days.
+    Simulates an IT SLA audit.
+    """
+    apps = db.list_applications()
+    stale = []
+    now = datetime.now()
+    
+    for a in apps:
+        if a['status'] in ['Rejected', 'Offer Accepted']:
+            continue
+        last_updated = datetime.strptime(a['last_updated'], "%Y-%m-%d %H:%M:%S")
+        days = (now - last_updated).days
+        if days >= days_stale:
+            stale.append(f"Application #{a['id']} ({a['company']}: {a['role']}) - {days} days without update (Status: {a['status']})")
+            
+    if not stale:
+        return f"All active applications have had activity within the past {days_stale} days."
+    return "STALE PIPELINE ALERT:\n" + "\n".join(stale)
+
+# ==========================================
+# 3. MCP RESOURCES (Read-only context)
+# ==========================================
+
+@mcp.resource("profile://master-resume")
+def get_master_resume() -> str:
+    """Exposes the candidate's master resume as context for the AI."""
+    with open(RESUME_FILE, "r", encoding="utf-8") as f:
+        return f.read()
+
+# ==========================================
+# 4. MCP PROMPTS (Reusable AI Workflows)
+# ==========================================
+
+@mcp.prompt()
+def prepare_interview(company: str) -> str:
+    """A prompt workflow template to help the user prepare for an upcoming interview."""
+    return f"""Please review my master resume at resource 'profile://master-resume' and check my past notes for any applications to {company}.
+Then, provide:
+1. A 3-bullet summary of how my experience maps to {company}'s likely tech stack.
+2. 3 sharp technical questions I can ask the engineering interviewer about their infrastructure and automation practices."""
+
+if __name__ == "__main__":
+    mcp.run()

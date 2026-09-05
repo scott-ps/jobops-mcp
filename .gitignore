@@ -1,0 +1,17 @@
+# Virtual Environment (MUST IGNORE)
+.venv/
+env/
+venv/
+
+# Local SQLite Database
+jobops.db
+*.db
+*.sqlite3
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+
+# OS-specific clutter
+Thumbs.db
+.DS_Store
