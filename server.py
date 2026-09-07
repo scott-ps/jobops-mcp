@@ -2,12 +2,25 @@ import os
 from datetime import datetime
 from mcp.server.fastmcp import FastMCP
 import db
+from db import ApplicationStatus
+import sys
+import logging
 
-# 1. Initialize FastMCP
+# Configure logger for the whole application
+logging.basicConfig(
+    stream=sys.stderr, 
+    level=logging.INFO, 
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
+logger.info("JobOps MCP server initialized.")
+
+# Initialize FastMCP
 mcp = FastMCP("JobOps")
 
 # Initialize DB on startup
 db.init_db()
+logger.info("JobOps MCP server initialized with SQLite backend.")
 
 # Ensure sample files exist
 DOCS_DIR = os.path.abspath("profile_docs")
@@ -23,13 +36,14 @@ if not os.path.exists(RESUME_FILE):
 """)
 
 # ==========================================
-# 2. MCP TOOLS (Actions the LLM can execute)
+# MCP TOOLS (Actions the LLM can execute)
 # ==========================================
 
 @mcp.tool()
 def log_new_application(company: str, role: str, notes: str = "") -> str:
     """Log a new job application into the SQLite tracking database."""
     app_id = db.add_application(company, role, notes)
+    logger.info(f"AUDIT: Created application #{app_id} for '{role}' at '{company}'")
     return f"Application #{app_id} successfully created for {role} at {company}."
 
 @mcp.tool()
@@ -49,12 +63,15 @@ def get_pipeline(status: str = "") -> str:
     return "\n".join(lines)
 
 @mcp.tool()
-def update_application(app_id: int, new_status: str, notes: str = "") -> str:
+def update_application(app_id: int, new_status: ApplicationStatus, notes: str = "") -> str:
     """Update status and append notes to an existing application."""
-    success = db.update_status(app_id, new_status, notes)
+    success = db.update_status(app_id, new_status.value, notes)
     if success:
-        return f"Application #{app_id} status updated to '{new_status}'."
-    return f"Error: Application #{app_id} not found."
+        logger.info(f"AUDIT: Application #{app_id} transition -> {new_status.value}")
+        return f"Application #{app_id} status updated to '{new_status.value}'."
+    else:
+        logger.warning(f"WARN: Attempted to update non-existent application #{app_id}")
+        return f"Error: Application #{app_id} not found."
 
 @mcp.tool()
 def audit_stale_applications(days_stale: int = 14) -> str:
@@ -62,12 +79,13 @@ def audit_stale_applications(days_stale: int = 14) -> str:
     Identify applications that have had no updates in more than `days_stale` days.
     Simulates an IT SLA audit.
     """
+    logger.info(f"AUDIT: Scanning pipeline for applications idle > {days_stale} days")
     apps = db.list_applications()
     stale = []
     now = datetime.now()
     
     for a in apps:
-        if a['status'] in ['Rejected', 'Offer Accepted']:
+        if a['status'] in [ApplicationStatus.REJECTED.value, ApplicationStatus.OFFER.value]:
             continue
         last_updated = datetime.strptime(a['last_updated'], "%Y-%m-%d %H:%M:%S")
         days = (now - last_updated).days
@@ -79,7 +97,7 @@ def audit_stale_applications(days_stale: int = 14) -> str:
     return "STALE PIPELINE ALERT:\n" + "\n".join(stale)
 
 # ==========================================
-# 3. MCP RESOURCES (Read-only context)
+# MCP RESOURCES (Read-only context)
 # ==========================================
 
 @mcp.resource("profile://master-resume")
@@ -89,7 +107,7 @@ def get_master_resume() -> str:
         return f.read()
 
 # ==========================================
-# 4. MCP PROMPTS (Reusable AI Workflows)
+# MCP PROMPTS (Reusable AI Workflows)
 # ==========================================
 
 @mcp.prompt()

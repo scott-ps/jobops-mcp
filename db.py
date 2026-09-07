@@ -1,14 +1,28 @@
 import os
 import sqlite3
+import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from enum import Enum
+
+# Set up logger for db 
+logger = logging.getLogger(__name__)
 
 # Anchor DB_PATH to the exact directory of this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "jobops.db")
 
+# Define application status options to be used
+class ApplicationStatus(str, Enum):
+    APPLIED = "Applied"
+    SCREENING = "Screen scheduled"
+    INTERVIEWING = "Interviewing"
+    OFFER = "Offer received"
+    REJECTED = "Rejected"
+
 def init_db():
     """Initialize the SQLite database with the applications table."""
+    logger.info("Initializing SQLite database...")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
@@ -24,6 +38,7 @@ def init_db():
     """)
     conn.commit()
     conn.close()
+    logger.info(f"DB initialized")
 
 def add_application(company: str, role: str, notes: str = "") -> int:
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -31,11 +46,12 @@ def add_application(company: str, role: str, notes: str = "") -> int:
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO applications (company, role, status, date_applied, last_updated, notes)
-        VALUES (?, ?, 'Applied', ?, ?, ?)
-    """, (company, role, now, now, notes))
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (company, role, ApplicationStatus.APPLIED.value, now, now, notes))
     app_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    logger.info(f"Logging application for {company}")
     return app_id
 
 def list_applications(status: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -50,9 +66,10 @@ def list_applications(status: Optional[str] = None) -> List[Dict[str, Any]]:
         
     rows = cursor.fetchall()
     conn.close()
+    logger.info(f"Listing applications")
     return [dict(row) for row in rows]
 
-def update_status(app_id: int, new_status: str, notes: Optional[str] = None) -> bool:
+def update_status(app_id: int, new_status: ApplicationStatus, notes: Optional[str] = None) -> bool:
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
