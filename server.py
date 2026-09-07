@@ -5,6 +5,7 @@ import db
 from db import ApplicationStatus
 import sys
 import logging
+import scraper
 
 # Configure logger for the whole application
 logging.basicConfig(
@@ -95,6 +96,15 @@ def audit_stale_applications(days_stale: int = 14) -> str:
     if not stale:
         return f"All active applications have had activity within the past {days_stale} days."
     return "STALE PIPELINE ALERT:\n" + "\n".join(stale)
+
+@mcp.tool()
+def fetch_job_posting(url: str) -> str:
+    """
+    Fetch and extract the readable job description from a public URL
+    (e.g. Greenhouse, Lever, Indeed, or company career boards).
+    """
+    logger.info(f"AUDIT: Fetching job posting from URL: {url}")
+    return scraper.fetch_job_content(url)
 
 # ==========================================
 # MCP RESOURCES (Read-only context)
