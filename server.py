@@ -25,7 +25,8 @@ db.init_db()
 logger.info("JobOps MCP server initialized with SQLite backend.")
 
 # Ensure sample files exist
-DOCS_DIR = os.path.abspath("profile_docs")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DOCS_DIR = os.path.join(BASE_DIR, "profile_docs")
 os.makedirs(DOCS_DIR, exist_ok=True)
 RESUME_FILE = os.path.join(DOCS_DIR, "master_resume.md")
 
