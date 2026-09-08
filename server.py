@@ -6,6 +6,7 @@ from db import ApplicationStatus
 import sys
 import logging
 import scraper
+import writer
 
 # Configure logger for the whole application
 logging.basicConfig(
@@ -105,6 +106,15 @@ def fetch_job_posting(url: str) -> str:
     """
     logger.info(f"AUDIT: Fetching job posting from URL: {url}")
     return scraper.fetch_job_content(url)
+
+@mcp.tool()
+def save_tailored_document(company: str, doc_type: str, content: str) -> str:
+    """
+    Save a tailored document (such as a cover letter, tailored resume notes,
+    or interview prep summary) as a Markdown file on disk under the output/ directory.
+    """
+    logger.info(f"AUDIT: Tool invoked to save '{doc_type}' for '{company}'")
+    return writer.save_document(company, doc_type, content)
 
 # ==========================================
 # MCP RESOURCES (Read-only context)
