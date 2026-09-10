@@ -1,5 +1,6 @@
 import pytest
 import db
+import sqlite3
 
 @pytest.fixture(autouse=True)
 def isolated_db(tmp_path):
@@ -37,3 +38,17 @@ def test_update_nonexistent_application():
     """Verify updating a non-existent ID fails gracefully."""
     success = db.update_status(9999, db.ApplicationStatus.REJECTED)
     assert success is False
+
+def test_get_connection_closes_on_exception():
+    """get_connection() must close its connection even if the caller
+    raises inside the with-block, so a mid-transaction error can't leak
+    an open sqlite3 connection."""
+    conn_ref = None
+    with pytest.raises(ValueError):
+        with db.get_connection() as conn:
+            conn_ref = conn
+            raise ValueError("simulated failure mid-transaction")
+
+    # A closed sqlite3 connection raises ProgrammingError on further use
+    with pytest.raises(sqlite3.ProgrammingError):
+        conn_ref.execute("SELECT 1")

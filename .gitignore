@@ -2,6 +2,7 @@
 .venv/
 env/
 venv/
+.venv-clean/
 
 # Local SQLite Database
 jobops.db
