@@ -68,7 +68,7 @@ def get_pipeline(status: str = "") -> str:
 @mcp.tool()
 def update_application(app_id: int, new_status: ApplicationStatus, notes: str = "") -> str:
     """Update status and append notes to an existing application."""
-    success = db.update_status(app_id, new_status.value, notes)
+    success = db.update_status(app_id, new_status, notes)
     if success:
         logger.info(f"AUDIT: Application #{app_id} transition -> {new_status.value}")
         return f"Application #{app_id} status updated to '{new_status.value}'."
