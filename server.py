@@ -7,6 +7,9 @@ import sys
 import logging
 import scraper
 import writer
+import uvicorn
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 # Configure logger for the whole application
 logging.basicConfig(
@@ -142,5 +145,42 @@ Then, provide:
 1. A 3-bullet summary of how my experience maps to {company}'s likely tech stack.
 2. 3 sharp technical questions I can ask the engineering interviewer about their infrastructure and automation practices."""
 
+# ==========================================
+# MAIN
+# ==========================================
+
+class BearerAuthMiddleware(BaseHTTPMiddleware):
+    """Rejects any request that doesn't carry the shared-secret bearer token."""
+
+    def __init__(self, app, token: str):
+        super().__init__(app)
+        self.token = token
+
+    async def dispatch(self, request, call_next):
+        auth_header = request.headers.get("authorization", "")
+        if auth_header != f"Bearer {self.token}":
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
+        return await call_next(request)
+
 if __name__ == "__main__":
-    mcp.run()
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+
+    if transport == "http":
+        host = os.environ.get("MCP_HOST", "0.0.0.0")
+        port = int(os.environ.get("MCP_PORT", "8000"))
+        auth_token = os.environ.get("MCP_AUTH_TOKEN")
+
+        if not auth_token:
+            raise RuntimeError(
+                "MCP_AUTH_TOKEN must be set when MCP_TRANSPORT=http — "
+                "refusing to start an unauthenticated server on the network."
+            )
+
+        http_app = mcp.streamable_http_app()
+        http_app.add_middleware(BearerAuthMiddleware, token=auth_token)
+
+        logger.info(f"Starting JobOps MCP over Streamable HTTP on {host}:{port}")
+        uvicorn.run(http_app, host=host, port=port)
+    else:
+        logger.info("Starting JobOps MCP over stdio")
+        mcp.run()
