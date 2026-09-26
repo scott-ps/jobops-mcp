@@ -10,6 +10,7 @@ import writer
 import uvicorn
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+from mcp.server.transport_security import TransportSecuritySettings
 
 # Configure logger for the whole application
 logging.basicConfig(
@@ -20,8 +21,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.info("JobOps MCP server initialized.")
 
-# Initialize FastMCP
-mcp = FastMCP("JobOps")
+# Set up transport_security for FastMCP.streamable_http_app
+def _build_transport_security() -> TransportSecuritySettings | None:
+    allowed_host = os.environ.get("MCP_ALLOWED_HOST")
+    if not allowed_host:
+        return None
+    return TransportSecuritySettings(
+        allowed_hosts=[allowed_host, f"{allowed_host}:*"],
+        allowed_origins=[f"https://{allowed_host}"],
+    )
+
+# Initialize FastMCP    
+mcp = FastMCP("JobOps", transport_security=_build_transport_security())
 
 # Initialize DB on startup
 db.init_db()
@@ -174,6 +185,13 @@ if __name__ == "__main__":
             raise RuntimeError(
                 "MCP_AUTH_TOKEN must be set when MCP_TRANSPORT=http — "
                 "refusing to start an unauthenticated server on the network."
+            )
+
+        allowed_host = os.environ.get("MCP_ALLOWED_HOST")
+        if not allowed_host:
+            raise RuntimeError(
+                "MCP_ALLOWED_HOST must be set when MCP_TRANSPORT=http — needed so the "
+                "SDK's DNS-rebinding protection trusts your real hostname."
             )
 
         http_app = mcp.streamable_http_app()
