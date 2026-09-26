@@ -187,13 +187,6 @@ if __name__ == "__main__":
                 "refusing to start an unauthenticated server on the network."
             )
 
-        allowed_host = os.environ.get("MCP_ALLOWED_HOST")
-        if not allowed_host:
-            raise RuntimeError(
-                "MCP_ALLOWED_HOST must be set when MCP_TRANSPORT=http — needed so the "
-                "SDK's DNS-rebinding protection trusts your real hostname."
-            )
-
         http_app = mcp.streamable_http_app()
         http_app.add_middleware(BearerAuthMiddleware, token=auth_token)
 
