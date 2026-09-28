@@ -1,3 +1,4 @@
+import hmac
 import os
 from datetime import datetime
 from mcp.server.fastmcp import FastMCP
@@ -64,13 +65,13 @@ def log_new_application(company: str, role: str, notes: str = "") -> str:
     return f"Application #{app_id} successfully created for {role} at {company}."
 
 @mcp.tool()
-def get_pipeline(status: str = "") -> str:
+def get_pipeline(status: ApplicationStatus | None = None) -> str:
     """
     List applications in the pipeline.
-    Optionally filter by status (e.g. 'Applied', 'Screen scheduled', 'Interviewing', 'Rejected').
+    Optionally filter by status ('Applied', 'Screen scheduled', 'Interviewing',
+    'Offer received', 'Rejected'). Omit status to list every application.
     """
-    filter_status = status.strip() if status.strip() else None
-    apps = db.list_applications(filter_status)
+    apps = db.list_applications(status.value if status else None)
     if not apps:
         return "No applications found."
     
@@ -169,7 +170,9 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request, call_next):
         auth_header = request.headers.get("authorization", "")
-        if auth_header != f"Bearer {self.token}":
+        expected = f"Bearer {self.token}"
+        # Using hmac instead of != is a constant-time comparison; helps prevent timing attacks
+        if not hmac.compare_digest(auth_header.encode(), expected.encode()):
             return JSONResponse({"error": "Unauthorized"}, status_code=401)
         return await call_next(request)
 

@@ -2,18 +2,7 @@ import pytest
 import db
 import sqlite3
 
-@pytest.fixture(autouse=True)
-def isolated_db(tmp_path):
-    """
-    Redirect db.DB_PATH to a temporary directory for every test.
-    pytest automatically discards tmp_path after each test, so the
-    real jobops.db is never read or written during the test suite.
-    """
-    original_path = db.DB_PATH
-    db.DB_PATH = str(tmp_path / "test_jobops.db")
-    db.init_db()
-    yield
-    db.DB_PATH = original_path
+pytestmark = pytest.mark.usefixtures("isolated_db")
 
 def test_add_and_get_application():
     """Verify an application can be created and retrieved."""
