@@ -43,8 +43,9 @@ Point your MCP client (Claude Desktop, Claude Code, etc.) at this command direct
 ### Run with Docker
 ```bash
 docker build -t jobops-mcp .
-docker run -i --rm jobops-mcp
+docker run -i --rm -v jobops-data:/data jobops-mcp
 ```
+The database and generated documents are stored in `/data` inside the container. Mounting the named volume `jobops-data` there keeps them across container restarts and image rebuilds. Outside Docker, they default to the project folder; set `JOBOPS_DATA_DIR` to store them elsewhere.
 
 ### Tests
 ```bash
@@ -68,6 +69,7 @@ The server can also run over **Streamable HTTP**, so it can be hosted on a remot
 Example:
 ```bash
 docker run -d -p 8000:8000 \
+  -v jobops-data:/data \
   -e MCP_TRANSPORT=http \
   -e MCP_AUTH_TOKEN="$(openssl rand -hex 32)" \
   -e MCP_ALLOWED_HOST=your-hostname.example.com \
@@ -96,6 +98,7 @@ server.py       MCP server: tools, resources, prompts, transport/auth setup
 db.py           SQLite persistence for the application pipeline
 scraper.py      Job-posting fetcher with SSRF hardening
 writer.py       Tailored-document writer with path-traversal hardening
+config.py       Data-folder setting (JOBOPS_DATA_DIR)
 tests/          pytest suite
 Dockerfile      Container build
 requirements.txt
