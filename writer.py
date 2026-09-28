@@ -1,12 +1,12 @@
 import os
 import re
 import logging
+import config
 
 logger = logging.getLogger(__name__)
 
-# Anchor the output directory to the project root
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+# Generated documents live in the data folder (see config.py)
+OUTPUT_DIR = os.path.join(config.data_dir(), "output")
 
 def sanitize_name(name: str) -> str:
     """
@@ -46,8 +46,9 @@ def save_document(company: str, doc_type: str, content: str, output_base: str = 
             f.write(content)
 
         logger.info(f"AUDIT: Document saved successfully at {resolved_path}")
-        return f"Document successfully saved to '{os.path.relpath(resolved_path, BASE_DIR)}'."
-
+        saved_as = os.path.join("output", os.path.relpath(resolved_path, resolved_base))
+        return f"Document successfully saved to '{saved_as}'."
+    
     except Exception as e:
         logger.error(f"Failed to write document to {resolved_path}: {e}")
         return f"Error: Could not save document ({str(e)})."

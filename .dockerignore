@@ -1,5 +1,7 @@
-.venv
+.venv*
 __pycache__
 *.pyc
 jobops.db
 .git
+.pytest_cache
+output/

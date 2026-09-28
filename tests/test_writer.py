@@ -15,6 +15,7 @@ def test_save_document_success(tmp_path):
     
     # Verify success response
     assert "Document successfully saved" in result
+    assert os.path.join("output", "Acme Corp", "cover_letter.md") in result
     
     # Verify file exists on disk and content matches
     expected_file = os.path.join(test_output_dir, "Acme Corp", "cover_letter.md")
