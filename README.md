@@ -10,7 +10,7 @@ JobOps MCP is a [Model Context Protocol](https://modelcontextprotocol.io) server
 | Tool | Description |
 |---|---|
 | `log_new_application(company, role, notes="")` | Log a new job application into the tracking database. |
-| `get_pipeline(status="")` | List applications in the pipeline, optionally filtered by status (`Applied`, `Screen scheduled`, `Interviewing`, `Rejected`, `Offer`). |
+| `get_pipeline(status=None)` | List applications in the pipeline, optionally filtered by status (`Applied`, `Screen scheduled`, `Interviewing`, `Offer received`, `Rejected`). |
 | `update_application(app_id, new_status, notes="")` | Update an application's status and append notes. |
 | `audit_stale_applications(days_stale=14)` | Flag applications with no status update in more than N days — a lightweight SLA audit over your own pipeline. |
 | `fetch_job_posting(url)` | Fetch and extract the readable text of a public job posting (Greenhouse, Lever, Indeed, company career pages). Returned content is explicitly wrapped and labeled as untrusted external data. |

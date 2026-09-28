@@ -16,3 +16,6 @@ __pycache__/
 # OS-specific clutter
 Thumbs.db
 .DS_Store
+
+# Generated tailored documents (cover letters, etc.) - personal, never commit
+output/
