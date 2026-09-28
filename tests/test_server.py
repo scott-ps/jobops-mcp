@@ -3,8 +3,6 @@ import json
 import os
 from unittest.mock import patch
 
-import pytest
-
 from starlette.applications import Starlette
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
@@ -13,13 +11,6 @@ from starlette.testclient import TestClient
 import db
 from db import ApplicationStatus
 from server import _build_transport_security, BearerAuthMiddleware, get_pipeline, mcp
-
-
-@pytest.fixture
-def isolated_db(tmp_path, monkeypatch):
-    """Point db at a throwaway SQLite file so the real jobops.db is untouched."""
-    monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "test_jobops.db"))
-    db.init_db()
 
 
 def test_get_pipeline_filters_by_offer_received(isolated_db):
@@ -81,7 +72,7 @@ def test_bearer_auth_rejects_non_ascii_token():
     client = _make_test_app()
     resp = client.get("/", headers={"Authorization": "Bearer sécret".encode("latin-1")})
     assert resp.status_code == 401
-    
+
 
 def test_bearer_auth_accepts_correct_token():
     client = _make_test_app()
