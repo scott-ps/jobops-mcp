@@ -48,6 +48,7 @@ docker run -i --rm jobops-mcp
 
 ### Tests
 ```bash
+pip install -r requirements-dev.txt
 pytest
 ```
 Covers the SQLite layer, the job-posting scraper's SSRF/URL-safety checks (including redirect handling), and the HTTP transport's auth and host-validation logic.
