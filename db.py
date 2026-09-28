@@ -5,13 +5,14 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from enum import Enum
 from contextlib import contextmanager
+import config
+
 
 # Set up logger for db 
 logger = logging.getLogger(__name__)
 
-# Anchor DB_PATH to the exact directory of this file
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "jobops.db")
+# The database lives in the data folder (see config.py)
+DB_PATH = os.path.join(config.data_dir(), "jobops.db")
 
 @contextmanager
 def get_connection():
@@ -34,6 +35,9 @@ class ApplicationStatus(str, Enum):
 def init_db():
     """Initialize the SQLite database with the applications table."""
     logger.info("Initializing SQLite database...")
+
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
