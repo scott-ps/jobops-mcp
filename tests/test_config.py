@@ -23,3 +23,10 @@ def test_init_db_creates_missing_data_folder(monkeypatch, tmp_path):
     monkeypatch.setattr(db, "DB_PATH", str(db_path))
     db.init_db()
     assert db_path.exists()
+
+
+def test_importing_server_creates_no_files(tmp_path):
+    """Importing server.py must not create the database; only starting it should."""
+    env = {**os.environ, "JOBOPS_DATA_DIR": str(tmp_path)}
+    subprocess.run([sys.executable, "-c", "import server"], cwd=PROJECT_ROOT, env=env, check=True)
+    assert list(tmp_path.iterdir()) == []

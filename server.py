@@ -35,15 +35,25 @@ def _build_transport_security() -> TransportSecuritySettings | None:
 # Initialize FastMCP    
 mcp = FastMCP("JobOps", transport_security=_build_transport_security())
 
-# Initialize DB on startup
-db.init_db()
-logger.info("JobOps MCP server initialized with SQLite backend.")
-
-# Ensure sample files exist
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOCS_DIR = os.path.join(BASE_DIR, "profile_docs")
-os.makedirs(DOCS_DIR, exist_ok=True)
 RESUME_FILE = os.path.join(DOCS_DIR, "master_resume.md")
+
+
+def init_storage():
+    """Create the database and sample files. Called when the server starts,
+    not on import, so importing this module (e.g. in tests) has no side effects."""
+    db.init_db()
+    logger.info(f"JobOps MCP server initialized with SQLite backend at {db.DB_PATH}")
+
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    if not os.path.exists(RESUME_FILE):
+        with open(RESUME_FILE, "w", encoding="utf-8") as f:
+            f.write("""# Candidate Master Profile
+- **Core Skills**: filler
+- **Experience**: filler
+- **Key Projects**: filler
+""")
 
 if not os.path.exists(RESUME_FILE):
     with open(RESUME_FILE, "w", encoding="utf-8") as f:
@@ -177,6 +187,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 if __name__ == "__main__":
+    init_storage()
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
 
     if transport == "http":
