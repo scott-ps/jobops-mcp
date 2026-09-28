@@ -77,6 +77,12 @@ def test_bearer_auth_rejects_wrong_token():
     assert resp.status_code == 401
 
 
+def test_bearer_auth_rejects_non_ascii_token():
+    client = _make_test_app()
+    resp = client.get("/", headers={"Authorization": "Bearer sécret".encode("latin-1")})
+    assert resp.status_code == 401
+    
+
 def test_bearer_auth_accepts_correct_token():
     client = _make_test_app()
     resp = client.get("/", headers={"Authorization": "Bearer secret"})

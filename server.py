@@ -1,3 +1,4 @@
+import hmac
 import os
 from datetime import datetime
 from mcp.server.fastmcp import FastMCP
@@ -169,7 +170,9 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request, call_next):
         auth_header = request.headers.get("authorization", "")
-        if auth_header != f"Bearer {self.token}":
+        expected = f"Bearer {self.token}"
+        # Using hmac instead of != is a constant-time comparison; helps prevent timing attacks
+        if not hmac.compare_digest(auth_header.encode(), expected.encode()):
             return JSONResponse({"error": "Unauthorized"}, status_code=401)
         return await call_next(request)
 
