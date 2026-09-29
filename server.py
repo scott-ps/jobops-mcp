@@ -78,15 +78,6 @@ def init_storage():
 """)
 
 
-if not os.path.exists(RESUME_FILE):
-    with open(RESUME_FILE, "w", encoding="utf-8") as f:
-        f.write("""# Candidate Master Profile
-- **Core Skills**: filler
-- **Experience**: filler
-- **Key Projects**: filler
-""")
-
-
 # ==========================================
 # MCP TOOLS (Actions the LLM can execute)
 # ==========================================
