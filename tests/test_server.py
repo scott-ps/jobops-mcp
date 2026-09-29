@@ -13,6 +13,7 @@ from db import ApplicationStatus
 from server import _build_transport_security, BearerAuthMiddleware, get_pipeline, mcp
 
 
+# isolated_db (tests/conftest.py) gives each test its own empty database
 def test_get_pipeline_filters_by_offer_received(isolated_db):
     offer_id = db.add_application("Offer Corp", "Engineer")
     db.update_status(offer_id, ApplicationStatus.OFFER)
@@ -33,6 +34,7 @@ def test_get_pipeline_without_filter_lists_all(isolated_db):
 
 def test_get_pipeline_schema_exposes_valid_statuses():
     """Clients should see the real enum values, so 'Offer' can't be guessed."""
+    # list_tools() is async, so run it to completion here
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
     schema = json.dumps(tools["get_pipeline"].inputSchema)
     for status in ApplicationStatus:
@@ -52,6 +54,8 @@ def test_transport_security_allowlists_host_when_set():
 
 
 def _make_test_app(token="secret"):
+    """A minimal app with one route behind BearerAuthMiddleware, so the auth check
+    can be tested without starting the real MCP server."""
     app = Starlette(routes=[Route("/", lambda r: PlainTextResponse("ok"))])
     app.add_middleware(BearerAuthMiddleware, token=token)
     return TestClient(app)
@@ -70,6 +74,7 @@ def test_bearer_auth_rejects_wrong_token():
 
 def test_bearer_auth_rejects_non_ascii_token():
     client = _make_test_app()
+    # Non-ASCII header value; must be a clean 401, not a 500 from compare_digest
     resp = client.get("/", headers={"Authorization": "Bearer sécret".encode("latin-1")})
     assert resp.status_code == 401
 

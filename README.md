@@ -38,7 +38,29 @@ By default the server speaks stdio — the standard transport for a locally-laun
 ```bash
 python server.py
 ```
-Point your MCP client (Claude Desktop, Claude Code, etc.) at this command directly, or use the included `run-inspector.ps1` to test it with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector).
+To test it interactively with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector), use the included `run-inspector.ps1` (Windows) or `run-inspector.sh` (Linux/macOS).
+
+#### Connecting a local client
+- **Claude Desktop:** add the server to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\`, macOS: `~/Library/Application Support/Claude/`):
+  ```json
+  {
+    "mcpServers": {
+      "jobops": {
+        "command": "C:\\path\\to\\jobops-mcp\\.venv\\Scripts\\python.exe",
+        "args": ["C:\\path\\to\\jobops-mcp\\server.py"]
+      }
+    }
+  }
+  ```
+  - `command` should be the Python inside the virtual environment where you installed `requirements.txt` (on macOS/Linux, `.venv/bin/python`), so the server's dependencies are available.
+  - Use absolute paths. On Windows, double every backslash, since JSON treats `\` as an escape character.
+  - If the file already has an `mcpServers` section, add the `"jobops"` entry inside it.
+  - To keep the database and generated documents outside the project folder, add `"env": { "JOBOPS_DATA_DIR": "<absolute path>" }` alongside `args`.
+  - Fully quit and restart Claude Desktop after editing; it only reads this file on startup.
+- **Claude Code:**
+  ```bash
+  claude mcp add jobops -- /path/to/jobops-mcp/.venv/bin/python /path/to/jobops-mcp/server.py
+  ```
 
 ### Run with Docker
 ```bash

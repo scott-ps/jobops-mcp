@@ -1,8 +1,10 @@
-from unittest.mock import patch, MagicMock
-import httpx
-import scraper
 import socket
+from unittest.mock import patch, MagicMock
+
+import httpx
 import pytest
+
+import scraper
 
 # Sample mock HTML representing a typical job board
 MOCK_JOB_HTML = """
@@ -22,6 +24,8 @@ MOCK_JOB_HTML = """
 </html>
 """
 
+
+# The fetch tests bypass the URL safety check and mock httpx, so they never touch the network
 @patch("scraper._is_url_allowed", return_value=True)
 def test_fetch_job_content_success(mock_url_check):
     """Verify that HTML is parsed and noisy tags (nav, footer, script) are removed."""
@@ -33,15 +37,16 @@ def test_fetch_job_content_success(mock_url_check):
 
     with patch("httpx.Client.get", return_value=mock_response):
         result = scraper.fetch_job_content("https://example.com/jobs/123")
-        
+
         # Verify core content was extracted
         assert "Senior Automation Engineer" in result
         assert "We are looking for a Python and CI/CD specialist." in result
-        
+
         # Verify noise tags were stripped
         assert "var tracking = true" not in result
         assert "Home | Careers | About" not in result
         assert "Copyright 2026 Acme Corp" not in result
+
 
 @patch("scraper._is_url_allowed", return_value=True)
 def test_fetch_job_content_http_error(mock_url_check):
@@ -54,9 +59,13 @@ def test_fetch_job_content_http_error(mock_url_check):
         result = scraper.fetch_job_content("https://example.com/jobs/invalid")
         assert "Error: Server returned HTTP status 404" in result
 
+
 def _mock_addrinfo(ip):
+    """Fake socket.getaddrinfo() result: a single entry resolving to `ip`."""
     return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0))]
 
+
+# DNS is mocked, so each case controls exactly which IP the hostname "resolves" to
 @pytest.mark.parametrize("url,resolved_ip,allowed", [
     ("https://boards.greenhouse.io/example", "93.184.216.34", True),   # public IP
     ("http://169.254.169.254/latest/meta-data/", "169.254.169.254", False),  # cloud metadata
@@ -68,6 +77,7 @@ def test_is_url_allowed_dns(mock_getaddrinfo, url, resolved_ip, allowed):
     mock_getaddrinfo.return_value = _mock_addrinfo(resolved_ip)
     assert scraper._is_url_allowed(url) == allowed
 
+
 @pytest.mark.parametrize("url", [
     "ftp://example.com/",
     "file:///etc/passwd",
@@ -78,6 +88,7 @@ def test_is_url_allowed_bad_scheme(url):
     with patch("socket.getaddrinfo") as mock_getaddrinfo:
         assert scraper._is_url_allowed(url) is False
         mock_getaddrinfo.assert_not_called()
+
 
 @patch("scraper._is_url_allowed")
 def test_fetch_job_content_blocks_unsafe_redirect(mock_url_check):
@@ -91,6 +102,7 @@ def test_fetch_job_content_blocks_unsafe_redirect(mock_url_check):
     with patch("httpx.Client.get", return_value=redirect_response):
         result = scraper.fetch_job_content("https://example.com/jobs/123")
         assert "Error: This URL redirected to a disallowed address." in result
+
 
 @patch("scraper._is_url_allowed", return_value=True)
 def test_fetch_job_content_wraps_content_as_untrusted(mock_url_check):
