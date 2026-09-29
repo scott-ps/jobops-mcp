@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 
@@ -26,8 +27,21 @@ def test_init_db_creates_missing_data_folder(monkeypatch, tmp_path):
 
 
 def test_importing_server_creates_no_files(tmp_path):
-    """Importing server.py must not create the database; only starting it should."""
-    # Runs in a fresh Python process, since server may already be imported in this one
-    env = {**os.environ, "JOBOPS_DATA_DIR": str(tmp_path)}
-    subprocess.run([sys.executable, "-c", "import server"], cwd=PROJECT_ROOT, env=env, check=True)
-    assert list(tmp_path.iterdir()) == []
+    """Importing server.py must not create any files (database, resume, ...); only starting it should."""
+    # Some paths (like the resume) come from the modules' own location, so import a copy
+    # of them from tmp_path. The real project and data folders are never touched.
+    for name in os.listdir(PROJECT_ROOT):
+        if name.endswith(".py"):
+            shutil.copy(os.path.join(PROJECT_ROOT, name), tmp_path)
+    (tmp_path / "profile_docs").mkdir()
+
+    def files():
+        return {p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*")}
+
+    before = files()
+
+    # Runs in a fresh Python process, since server may already be imported in this one.
+    # No bytecode, so __pycache__ doesn't show up as a new file.
+    env = {**os.environ, "JOBOPS_DATA_DIR": str(tmp_path / "data"), "PYTHONDONTWRITEBYTECODE": "1"}
+    subprocess.run([sys.executable, "-c", "import server"], cwd=tmp_path, env=env, check=True)
+    assert files() == before
