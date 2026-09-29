@@ -1,6 +1,6 @@
 name: CI
 
-on: 
+on:
   push:
     branches: [ "main", "master", "feature/**", "fix/**" ]
   pull_request:
@@ -32,7 +32,7 @@ jobs:
       - name: Verify server imports cleanly
         run: |
           python -c "import server; print('JobOps MCP Server loaded successfully!')"
-      
+
       - name: Run unit tests
         run: |
           python -m pytest tests/
